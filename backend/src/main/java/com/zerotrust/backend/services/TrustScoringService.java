@@ -10,7 +10,6 @@ import weka.core.*;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class TrustScoringService {
 
     private Classifier rfModel;

@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 @RequiredArgsConstructor
-public class BackendApplication implements CommandLineRunner {
+public class BackendApplication {
 
     private final DataLoaderService dataLoaderService;
 
@@ -16,8 +16,4 @@ public class BackendApplication implements CommandLineRunner {
 		SpringApplication.run(BackendApplication.class, args);
 	}
 
-    @Override
-    public void run(String... args) throws Exception {
-        dataLoaderService.generateSampleData(10); // create 10 users
-    }
 }

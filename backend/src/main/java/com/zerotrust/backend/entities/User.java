@@ -3,11 +3,14 @@ package com.zerotrust.backend.entities;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.zerotrust.backend.enums.RiskLevel;
 import com.zerotrust.backend.enums.UserRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -48,7 +51,11 @@ public class User implements UserDetails {
     // Zero-Trust Trust Score
     @Min(0)
     @Max(100)
+    @Column(columnDefinition = "double default 50")
     Double trustScore;
+
+    @Enumerated(EnumType.STRING)
+    RiskLevel currentRiskLevel;
 
     boolean mfaEnabled;
     boolean accountLocked;
@@ -56,8 +63,13 @@ public class User implements UserDetails {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
     Instant lastLoginAt;
+
+    @CreationTimestamp
+    @Column(updatable = false)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
     Instant createdAt;
+
+    @UpdateTimestamp
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "UTC")
     Instant updateAt;
 
