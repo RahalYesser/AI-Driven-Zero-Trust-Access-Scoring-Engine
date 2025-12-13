@@ -51,8 +51,8 @@ public class User implements UserDetails {
     // Zero-Trust Trust Score
     @Min(0)
     @Max(100)
-    @Column(columnDefinition = "double default 50")
-    Double trustScore;
+    @Builder.Default
+    Double trustScore = 50.0;
 
     @Enumerated(EnumType.STRING)
     RiskLevel currentRiskLevel;

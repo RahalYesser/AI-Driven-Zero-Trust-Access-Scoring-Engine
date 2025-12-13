@@ -28,6 +28,7 @@ public class AccessEvent {
     @GeneratedValue(strategy = GenerationType.UUID)
     UUID id;
 
+    Instant timestamp;
     String ipAddress;
     @Enumerated(EnumType.STRING)
     NetworkType networkType;

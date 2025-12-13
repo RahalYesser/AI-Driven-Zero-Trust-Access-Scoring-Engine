@@ -41,8 +41,8 @@ public class FeatureExtractionService {
         features.put("unpatchedDevices", unpatchedDevices);
 
         // --- Contextual Features ---
-        long vpnAccessCount = events.stream().filter(AccessEvent::isVpn).count();
-        features.put("vpnAccessRate", totalEvents == 0 ? 0.0 : (double) vpnAccessCount / totalEvents);
+       // long vpnAccessCount = events.stream().filter(AccessEvent::isVpn).count();
+        // features.put("vpnAccessRate", totalEvents == 0 ? 0.0 : (double) vpnAccessCount / totalEvents);
 
         Instant lastLogin = user.getLastLoginAt() != null ? user.getLastLoginAt() : Instant.now();
         long secondsSinceLastLogin = Instant.now().getEpochSecond() - lastLogin.getEpochSecond();

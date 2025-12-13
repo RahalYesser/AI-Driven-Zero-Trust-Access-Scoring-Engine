@@ -3,10 +3,10 @@ package com.zerotrust.backend.bootstrap;
 import com.zerotrust.backend.entities.*;
 import com.zerotrust.backend.enums.*;
 import com.zerotrust.backend.repositories.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
