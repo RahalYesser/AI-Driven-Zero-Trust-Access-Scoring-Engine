@@ -12,31 +12,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Trust Score History API
+ * Note: Current trust scores are available via /api/auth/user-status
+ */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/risk-history")
 @RequiredArgsConstructor
-@Tag(name = "Trust Score", description = "User Trust Score & Risk History APIs")
+@Tag(name = "Risk History", description = "Historical risk score data for analysis")
 public class TrustScoreController {
 
     private final RiskScoreHistoryRepository historyRepo;
 
-    @GetMapping("/trust-score/{userId}")
-    @Operation(summary = "Get Current Trust Score", description = "Get the latest trust score for a user")
-    public Map<String, Object> getCurrentScore(
-            @Parameter(description = "User ID") @PathVariable UUID userId){
-        RiskScoreHistory latest = historyRepo.findTopByUserIdOrderByCalculatedAtDesc(userId);
-        return Map.of(
-                "score", latest.getScore(),
-                "riskLevel", latest.getLevel(),
-                "calculatedAt", latest.getCalculatedAt()
-        );
-    }
-
-    @GetMapping("/risk-history/{userId}")
-    @Operation(summary = "Get Risk History", description = "Get the risk score history for a user")
+    @GetMapping("/{userId}")
+    @Operation(summary = "Get Risk Score History", 
+               description = "Get historical risk scores for trend analysis (current score available in /api/auth/user-status)")
     public List<RiskScoreHistory> getHistory(
             @Parameter(description = "User ID") @PathVariable UUID userId){
         return historyRepo.findByUserIdOrderByCalculatedAtDesc(userId);

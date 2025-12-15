@@ -62,23 +62,7 @@ public class AdminController {
         }
     }
 
-    /**
-     * Perform cross-validation
-     * GET /api/admin/cross-validate?samples=1000&folds=10
-     */
-    @GetMapping("/cross-validate")
-    public ResponseEntity<?> crossValidate(
-            @RequestParam(defaultValue = "1000") int samples,
-            @RequestParam(defaultValue = "10") int folds) {
-        try {
-            ModelEvaluationService.EvaluationMetrics metrics =
-                    evaluationService.crossValidate(samples, folds);
-            return ResponseEntity.ok(metrics);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
+    // Removed - use /evaluate endpoint for model validation
 
     /**
      * Get confusion matrix and false positive/negative rates
@@ -106,48 +90,7 @@ public class AdminController {
         return ResponseEntity.ok(info);
     }
 
-    /**
-     * Save current model
-     * POST /api/admin/save-model
-     */
-    @PostMapping("/save-model")
-    public ResponseEntity<?> saveModel() {
-        try {
-            trainingService.saveModel();
-            return ResponseEntity.ok(Map.of("message", "Model saved successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * Backup current model
-     * POST /api/admin/backup-model
-     */
-    @PostMapping("/backup-model")
-    public ResponseEntity<?> backupModel() {
-        try {
-            trainingService.backupModel();
-            return ResponseEntity.ok(Map.of("message", "Model backed up successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * Check if model is trained
-     * GET /api/admin/model-status
-     */
-    @GetMapping("/model-status")
-    public ResponseEntity<?> getModelStatus() {
-        boolean trained = trainingService.isModelTrained();
-        return ResponseEntity.ok(Map.of(
-                "trained", trained,
-                "message", trained ? "Model is trained and ready" : "Model needs training"
-        ));
-    }
+    // Removed redundant endpoints - model is auto-saved after training
 
     /**
      * Unlock a locked user account

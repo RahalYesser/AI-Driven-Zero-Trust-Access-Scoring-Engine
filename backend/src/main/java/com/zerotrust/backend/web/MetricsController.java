@@ -29,138 +29,68 @@ public class MetricsController {
     private final RiskScoreHistoryRepository historyRepo;
     private final UserRepository userRepo;
 
-    @GetMapping("/system-stats")
-    @Operation(summary = "Get System Statistics", description = "Get overall system statistics and metrics")
-    public Map<String, Object> getSystemStats() {
+    @GetMapping("/dashboard")
+    @Operation(summary = "Get Dashboard Statistics", 
+               description = "Get comprehensive dashboard statistics with risk distribution and explanations")
+    public Map<String, Object> getDashboardStats() {
         List<RiskScoreHistory> allScores = historyRepo.findAll();
-
         long totalUsers = userRepo.count();
-        long highRiskUsers = allScores.stream()
-                .filter(s -> s.getLevel() == RiskLevel.HIGH)
-                .map(RiskScoreHistory::getUser)
-                .distinct()
-                .count();
+        
+        // Calculate latest score per user
+        Map<String, RiskScoreHistory> latestScores = new HashMap<>();
+        allScores.forEach(score -> {
+            String userId = score.getUser().getId().toString();
+            if (!latestScores.containsKey(userId) || 
+                score.getCalculatedAt().isAfter(latestScores.get(userId).getCalculatedAt())) {
+                latestScores.put(userId, score);
+            }
+        });
+        
+        long highRiskUsers = latestScores.values().stream()
+                .filter(s -> s.getLevel() == RiskLevel.HIGH).count();
+        long mediumRiskUsers = latestScores.values().stream()
+                .filter(s -> s.getLevel() == RiskLevel.MEDIUM).count();
+        long lowRiskUsers = latestScores.values().stream()
+                .filter(s -> s.getLevel() == RiskLevel.LOW).count();
 
-        long mediumRiskUsers = allScores.stream()
-                .filter(s -> s.getLevel() == RiskLevel.MEDIUM)
-                .map(RiskScoreHistory::getUser)
-                .distinct()
-                .count();
+        double avgScore = latestScores.values().stream()
+                .mapToDouble(RiskScoreHistory::getScore).average().orElse(0.0);
 
-        long lowRiskUsers = allScores.stream()
-                .filter(s -> s.getLevel() == RiskLevel.LOW)
-                .map(RiskScoreHistory::getUser)
-                .distinct()
-                .count();
-
-        double avgScore = allScores.stream()
-                .mapToDouble(RiskScoreHistory::getScore)
-                .average()
-                .orElse(0.0);
-
+        Map<String, Object> dashboard = new HashMap<>();
+        
+        // Main statistics
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", totalUsers);
         stats.put("highRiskUsers", highRiskUsers);
         stats.put("mediumRiskUsers", mediumRiskUsers);
         stats.put("lowRiskUsers", lowRiskUsers);
-        stats.put("averageTrustScore", avgScore);
+        stats.put("averageTrustScore", Math.round(avgScore * 10.0) / 10.0);
         stats.put("totalScoreCalculations", allScores.size());
-
-        return stats;
+        dashboard.put("stats", stats);
+        
+        // Risk distribution with percentages
+        Map<String, Object> distribution = new HashMap<>();
+        distribution.put("HIGH", highRiskUsers);
+        distribution.put("MEDIUM", mediumRiskUsers);
+        distribution.put("LOW", lowRiskUsers);
+        distribution.put("highPercentage", totalUsers > 0 ? Math.round((highRiskUsers * 100.0 / totalUsers) * 10) / 10.0 : 0);
+        distribution.put("mediumPercentage", totalUsers > 0 ? Math.round((mediumRiskUsers * 100.0 / totalUsers) * 10) / 10.0 : 0);
+        distribution.put("lowPercentage", totalUsers > 0 ? Math.round((lowRiskUsers * 100.0 / totalUsers) * 10) / 10.0 : 0);
+        dashboard.put("distribution", distribution);
+        
+        // Explanations for each metric
+        Map<String, String> explanations = new HashMap<>();
+        explanations.put("totalUsers", "Total number of users registered in the system");
+        explanations.put("highRiskUsers", "Users with trust score < 40 - May face access restrictions or account locks");
+        explanations.put("mediumRiskUsers", "Users with trust score 40-75 - May require MFA for enhanced security");
+        explanations.put("lowRiskUsers", "Users with trust score > 75 - Trusted users with full access");
+        explanations.put("averageTrustScore", "Average trust score across all users (0-100 scale)");
+        explanations.put("totalScoreCalculations", "Total number of trust score evaluations performed");
+        explanations.put("riskLevels", "LOW (>75): Full Access | MEDIUM (40-75): MFA Required | HIGH (<40): Access Blocked");
+        dashboard.put("explanations", explanations);
+        
+        return dashboard;
     }
 
-    @GetMapping("/risk-distribution")
-    @Operation(summary = "Get Risk Distribution", description = "Get distribution of users by risk level")
-    public Map<String, Object> getRiskDistribution() {
-        List<RiskScoreHistory> latestScores = historyRepo.findAll();
-
-        Map<RiskLevel, Long> distribution = new HashMap<>();
-        distribution.put(RiskLevel.HIGH, latestScores.stream()
-                .filter(s -> s.getLevel() == RiskLevel.HIGH).count());
-        distribution.put(RiskLevel.MEDIUM, latestScores.stream()
-                .filter(s -> s.getLevel() == RiskLevel.MEDIUM).count());
-        distribution.put(RiskLevel.LOW, latestScores.stream()
-                .filter(s -> s.getLevel() == RiskLevel.LOW).count());
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("distribution", distribution);
-        result.put("total", latestScores.size());
-
-        return result;
-    }
-
-    @GetMapping("/score-trends")
-    @Operation(summary = "Get Score Trends", description = "Get trust score trends over time")
-    public Map<String, Object> getScoreTrends() {
-        Instant last24h = Instant.now().minus(24, ChronoUnit.HOURS);
-        Instant last7d = Instant.now().minus(7, ChronoUnit.DAYS);
-
-        List<RiskScoreHistory> last24hScores = historyRepo.findAll().stream()
-                .filter(s -> s.getCalculatedAt().isAfter(last24h))
-                .toList();
-
-        List<RiskScoreHistory> last7dScores = historyRepo.findAll().stream()
-                .filter(s -> s.getCalculatedAt().isAfter(last7d))
-                .toList();
-
-        Map<String, Object> trends = new HashMap<>();
-        trends.put("last24Hours", Map.of(
-                "count", last24hScores.size(),
-                "avgScore", last24hScores.stream()
-                        .mapToDouble(RiskScoreHistory::getScore).average().orElse(0.0)
-        ));
-        trends.put("last7Days", Map.of(
-                "count", last7dScores.size(),
-                "avgScore", last7dScores.stream()
-                        .mapToDouble(RiskScoreHistory::getScore).average().orElse(0.0)
-        ));
-
-        return trends;
-    }
-
-    @GetMapping("/false-positive-rate")
-    @Operation(summary = "Get False Positive Rate",
-               description = "Calculate false positive rate (low-risk users marked as high-risk)")
-    public Map<String, Object> getFalsePositiveRate() {
-        // This is a simplified calculation
-        // In production, you'd compare predicted vs actual outcomes
-        List<RiskScoreHistory> allScores = historyRepo.findAll();
-
-        long totalHighRisk = allScores.stream()
-                .filter(s -> s.getLevel() == RiskLevel.HIGH)
-                .count();
-
-        // Simulate false positives (in reality, this would be tracked from actual incidents)
-        // For demo purposes, assume ~5% false positive rate
-        long estimatedFalsePositives = totalHighRisk / 20;
-
-        double falsePositiveRate = totalHighRisk > 0 ?
-                (double) estimatedFalsePositives / totalHighRisk : 0.0;
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("falsePositiveRate", falsePositiveRate);
-        result.put("totalHighRiskPredictions", totalHighRisk);
-        result.put("estimatedFalsePositives", estimatedFalsePositives);
-        result.put("note", "This is an estimated metric. In production, track actual incidents.");
-
-        return result;
-    }
-
-    @GetMapping("/performance")
-    @Operation(summary = "Get Performance Metrics", description = "Get system performance metrics")
-    public Map<String, Object> getPerformanceMetrics() {
-        List<RiskScoreHistory> allScores = historyRepo.findAll();
-
-        // Calculate performance metrics
-        double avgEvaluationTime = 150.0; // ms (simulated)
-        long totalEvaluations = allScores.size();
-
-        Map<String, Object> performance = new HashMap<>();
-        performance.put("totalEvaluations", totalEvaluations);
-        performance.put("avgEvaluationTimeMs", avgEvaluationTime);
-        performance.put("evaluationsPerHour", totalEvaluations / 24.0); // Approximate
-        performance.put("systemUptime", "healthy");
-
-        return performance;
-    }
+    // Removed redundant endpoints - use /dashboard for comprehensive stats
 }

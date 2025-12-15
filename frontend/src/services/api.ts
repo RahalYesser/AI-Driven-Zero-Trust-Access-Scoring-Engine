@@ -89,6 +89,21 @@ export interface SystemStats {
   totalScoreCalculations: number;
 }
 
+export interface DashboardStats {
+  stats: SystemStats;
+  distribution: {
+    HIGH: number;
+    MEDIUM: number;
+    LOW: number;
+    highPercentage: number;
+    mediumPercentage: number;
+    lowPercentage: number;
+  };
+  explanations: {
+    [key: string]: string;
+  };
+}
+
 export interface ModelInfo {
   exists: boolean;
   path?: string;
@@ -155,17 +170,13 @@ export interface UserStatusResponse {
 }
 
 // API Functions
-export const getTrustScore = (userId: string) =>
-  api.get<TrustScore>(`/trust-score/${userId}`);
+// Get comprehensive dashboard stats with explanations
+export const getDashboardStats = () =>
+  adminApi.get<DashboardStats>('/metrics/dashboard');
 
+// Get risk history for a specific user
 export const getRiskHistory = (userId: string) =>
   api.get<RiskHistory[]>(`/risk-history/${userId}`);
-
-export const getSystemStats = () =>
-  adminApi.get<SystemStats>('/metrics/system-stats');
-
-export const getRiskDistribution = () =>
-  adminApi.get<any>('/metrics/risk-distribution');
 
 export const getModelInfo = () =>
   adminApi.get<ModelInfo>('/admin/model-info');
