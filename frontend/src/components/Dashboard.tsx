@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDashboardStats, type DashboardStats } from '../services/api';
+import { getDashboardStats, getSystemHealth, type DashboardStats, type SystemHealth } from '../services/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 const COLORS = {
@@ -10,6 +10,7 @@ const COLORS = {
 
 export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardStats | null>(null);
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
@@ -17,8 +18,12 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await getDashboardStats();
-      setDashboardData(res.data);
+      const [dashRes, healthRes] = await Promise.all([
+        getDashboardStats(),
+        getSystemHealth()
+      ]);
+      setDashboardData(dashRes.data);
+      setSystemHealth(healthRes.data);
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch data');
@@ -81,10 +86,16 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      {/* Risk Level Reference Card */}
+      {/* Enhanced Dashboard Introduction */}
       <div className="risk-reference-card">
-        <h3>📊 Risk Level Classification</h3>
-        <p className="risk-reference-text">{explanations?.riskLevels}</p>
+        <h3>📊 Zero-Trust Access Dashboard</h3>
+        <p className="risk-reference-text">
+          This dashboard provides real-time visibility into user trust scores and risk classifications. 
+          The ML model continuously evaluates users based on 10 behavioral and contextual features including 
+          login patterns, device security, network context, and historical activity. Risk levels determine 
+          access policies: <strong>LOW (&ge;75)</strong> = Full Access, <strong>MEDIUM (40-74)</strong> = MFA Required, 
+          <strong>HIGH (&lt;40)</strong> = Access Blocked.
+        </p>
       </div>
 
       {/* Main Statistics Cards */}
@@ -204,6 +215,119 @@ export default function Dashboard() {
           🔄 Last updated: {new Date().toLocaleTimeString()}
         </p>
       </div>
+
+      {/* System Health Metrics */}
+      {systemHealth && (
+        <div className="section" style={{ marginTop: '2rem' }}>
+          <h2>
+            🖥️ System Health & Performance
+            <span 
+              className="info-icon"
+              onMouseEnter={() => setShowTooltip('systemHealth')}
+              onMouseLeave={() => setShowTooltip(null)}
+              style={{ marginLeft: '8px' }}
+            >
+              ℹ️
+              {showTooltip === 'systemHealth' && (
+                <div className="tooltip">
+                  Real-time JVM memory usage, CPU information, and application status. 
+                  Memory usage shows heap allocation, while system info displays hardware capabilities.
+                </div>
+              )}
+            </span>
+          </h2>
+          
+          <div className="stats-grid">
+            {/* JVM Memory Usage */}
+            <div className="stat-card">
+              <div className="stat-header">
+                <h3>💾 JVM Memory</h3>
+                <span 
+                  className="info-icon"
+                  onMouseEnter={() => setShowTooltip('memory')}
+                  onMouseLeave={() => setShowTooltip(null)}
+                >
+                  ℹ️
+                  {showTooltip === 'memory' && (
+                    <div className="tooltip">
+                      Java Virtual Machine heap memory usage. Shows allocated memory out of maximum available. 
+                      High usage (&gt;80%) may indicate need for garbage collection or memory tuning.
+                    </div>
+                  )}
+                </span>
+              </div>
+              <p className="stat-value" style={{ 
+                color: systemHealth.memory.usagePercentage > 80 ? '#ef4444' : 
+                       systemHealth.memory.usagePercentage > 60 ? '#f59e0b' : '#10b981' 
+              }}>
+                {systemHealth.memory.usagePercentage}%
+              </p>
+              <p style={{ color: '#718096', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                {systemHealth.memory.usedMB} MB / {systemHealth.memory.maxMB} MB
+              </p>
+              <p style={{ color: '#a0aec0', fontSize: '0.75rem' }}>
+                Free: {systemHealth.memory.freeMB} MB
+              </p>
+            </div>
+
+            {/* CPU Cores */}
+            <div className="stat-card">
+              <div className="stat-header">
+                <h3>🔧 CPU Cores</h3>
+                <span 
+                  className="info-icon"
+                  onMouseEnter={() => setShowTooltip('cpu')}
+                  onMouseLeave={() => setShowTooltip(null)}
+                >
+                  ℹ️
+                  {showTooltip === 'cpu' && (
+                    <div className="tooltip">
+                      Number of available processor cores for parallel task execution. 
+                      More cores = better performance for concurrent ML predictions and API requests.
+                    </div>
+                  )}
+                </span>
+              </div>
+              <p className="stat-value">{systemHealth.system.availableProcessors}</p>
+              <p style={{ color: '#718096', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                Processors
+              </p>
+              <p style={{ color: '#a0aec0', fontSize: '0.75rem' }}>
+                {systemHealth.system.osArch}
+              </p>
+            </div>
+
+            {/* Application Status */}
+            <div className="stat-card">
+              <div className="stat-header">
+                <h3>✅ App Status</h3>
+                <span 
+                  className="info-icon"
+                  onMouseEnter={() => setShowTooltip('appStatus')}
+                  onMouseLeave={() => setShowTooltip(null)}
+                >
+                  ℹ️
+                  {showTooltip === 'appStatus' && (
+                    <div className="tooltip">
+                      Application health status. UP = fully operational and ready to process requests. 
+                      DOWN would indicate critical service failure.
+                    </div>
+                  )}
+                </span>
+              </div>
+              <p className="stat-value" style={{ color: '#10b981' }}>
+                {systemHealth.application.status}
+              </p>
+              <p style={{ color: '#718096', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                Java {systemHealth.system.javaVersion}
+              </p>
+              <p style={{ color: '#a0aec0', fontSize: '0.75rem' }}>
+                {systemHealth.system.osName}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -78,6 +78,14 @@
   padding: 30px;
 }
 
+.status-content p {
+  color: #4a5568;
+}
+
+.status-content strong {
+  color: #1a202c;
+}
+
 .status-header {
   display: flex;
   justify-content: space-between;
@@ -87,7 +95,7 @@
 
 .status-header h3 {
   margin: 0;
-  color: #333;
+  color: #1a202c;
 }
 
 .btn-refresh {
@@ -156,13 +164,17 @@
 
 .risk-content h4 {
   margin: 0 0 10px;
-  color: #333;
+  color: #1a202c;
 }
 
 .risk-content p {
   margin: 0;
-  color: #666;
+  color: #4a5568;
   line-height: 1.5;
+}
+
+.risk-content strong {
+  color: #1a202c;
 }
 
 .account-details {
@@ -171,7 +183,15 @@
 
 .account-details h4 {
   margin: 0 0 15px;
-  color: #333;
+  color: #1a202c;
+}
+
+.account-details p {
+  color: #4a5568;
+}
+
+.account-details strong {
+  color: #1a202c;
 }
 
 .detail-grid {

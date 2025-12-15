@@ -169,10 +169,36 @@ export interface UserStatusResponse {
   message: string;
 }
 
+export interface SystemHealth {
+  memory: {
+    usedMB: number;
+    freeMB: number;
+    totalMB: number;
+    maxMB: number;
+    usagePercentage: number;
+  };
+  system: {
+    availableProcessors: number;
+    javaVersion: string;
+    osName: string;
+    osArch: string;
+  };
+  application: {
+    status: string;
+    totalUsers: number;
+    totalScoreCalculations: number;
+    timestamp: string;
+  };
+}
+
 // API Functions
 // Get comprehensive dashboard stats with explanations
 export const getDashboardStats = () =>
   adminApi.get<DashboardStats>('/metrics/dashboard');
+
+// Get system health metrics
+export const getSystemHealth = () =>
+  adminApi.get<SystemHealth>('/metrics/system-health');
 
 // Get risk history for a specific user
 export const getRiskHistory = (userId: string) =>

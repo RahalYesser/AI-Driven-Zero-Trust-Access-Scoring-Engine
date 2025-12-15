@@ -92,5 +92,45 @@ public class MetricsController {
         return dashboard;
     }
 
+    @GetMapping("/system-health")
+    @Operation(summary = "Get System Health Metrics", 
+               description = "Get JVM metrics, system uptime, and application health information")
+    public Map<String, Object> getSystemHealth() {
+        Map<String, Object> health = new HashMap<>();
+        
+        // JVM Memory metrics
+        Runtime runtime = Runtime.getRuntime();
+        long totalMemory = runtime.totalMemory();
+        long freeMemory = runtime.freeMemory();
+        long usedMemory = totalMemory - freeMemory;
+        long maxMemory = runtime.maxMemory();
+        
+        Map<String, Object> memory = new HashMap<>();
+        memory.put("usedMB", usedMemory / (1024 * 1024));
+        memory.put("freeMB", freeMemory / (1024 * 1024));
+        memory.put("totalMB", totalMemory / (1024 * 1024));
+        memory.put("maxMB", maxMemory / (1024 * 1024));
+        memory.put("usagePercentage", Math.round((usedMemory * 100.0 / maxMemory) * 10) / 10.0);
+        health.put("memory", memory);
+        
+        // System information
+        Map<String, Object> system = new HashMap<>();
+        system.put("availableProcessors", runtime.availableProcessors());
+        system.put("javaVersion", System.getProperty("java.version"));
+        system.put("osName", System.getProperty("os.name"));
+        system.put("osArch", System.getProperty("os.arch"));
+        health.put("system", system);
+        
+        // Application metrics
+        Map<String, Object> app = new HashMap<>();
+        app.put("status", "UP");
+        app.put("totalUsers", userRepo.count());
+        app.put("totalScoreCalculations", historyRepo.count());
+        app.put("timestamp", Instant.now().toString());
+        health.put("application", app);
+        
+        return health;
+    }
+
     // Removed redundant endpoints - use /dashboard for comprehensive stats
 }
