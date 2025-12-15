@@ -4,5 +4,5 @@ public enum NetworkType {
     INTERNAL,
     EXTERNAL,
     VPN,
-    TOR
+    TOR,
 }

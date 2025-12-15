@@ -33,17 +33,49 @@ public class DataLoader implements CommandLineRunner {
         Random random = new Random();
 
         List<User> users = new ArrayList<>();
-        for (int i = 1; i <= 10; i++) {
+        
+        // Generate 50 users with balanced risk profiles
+        // 15 LOW risk, 20 MEDIUM risk, 15 HIGH risk
+        for (int i = 1; i <= 50; i++) {
+            RiskLevel riskLevel;
+            double trustScore;
+            int failedAttempts;
+            boolean mfaEnabled;
+            long lastLoginSeconds;
+            
+            if (i <= 15) {
+                // LOW RISK users (30%)
+                riskLevel = RiskLevel.LOW;
+                trustScore = 75.0 + random.nextDouble() * 25; // 75-100
+                failedAttempts = 0;
+                mfaEnabled = true;
+                lastLoginSeconds = random.nextInt(3600 * 12); // within 12 hours
+            } else if (i <= 35) {
+                // MEDIUM RISK users (40%)
+                riskLevel = RiskLevel.MEDIUM;
+                trustScore = 40.0 + random.nextDouble() * 35; // 40-75
+                failedAttempts = random.nextInt(3) + 1; // 1-3
+                mfaEnabled = random.nextBoolean();
+                lastLoginSeconds = random.nextInt(3600 * 48); // within 2 days
+            } else {
+                // HIGH RISK users (30%)
+                riskLevel = RiskLevel.HIGH;
+                trustScore = 10.0 + random.nextDouble() * 30; // 10-40
+                failedAttempts = random.nextInt(5) + 3; // 3-7
+                mfaEnabled = false;
+                lastLoginSeconds = random.nextInt(3600 * 168); // within 1 week
+            }
+            
             User user = User.builder()
                     .email("user" + i + "@company.com")
                     .password(passwordEncoder.encode("Password123!"))
-                    .role(i % 3 == 0 ? UserRole.ADMIN : UserRole.MANAGER)
-                    .trustScore(50.0 + random.nextDouble() * 50)
-                    .currentRiskLevel(RiskLevel.LOW)
-                    .mfaEnabled(i % 2 == 0)
+                    .role(i % 5 == 0 ? UserRole.ADMIN : UserRole.MANAGER)
+                    .trustScore(trustScore)
+                    .currentRiskLevel(riskLevel)
+                    .mfaEnabled(mfaEnabled)
                     .accountLocked(false)
-                    .failedLoginAttempts(random.nextInt(5))
-                    .lastLoginAt(Instant.now().minusSeconds(random.nextInt(3600 * 24 * 30)))
+                    .failedLoginAttempts(failedAttempts)
+                    .lastLoginAt(Instant.now().minusSeconds(lastLoginSeconds))
                     .build();
             users.add(user);
         }
@@ -51,16 +83,41 @@ public class DataLoader implements CommandLineRunner {
 
         List<Device> devices = new ArrayList<>();
         for (User user : users) {
-            int deviceCount = 2 + random.nextInt(4); // 2-5 devices
+            int deviceCount = 2 + random.nextInt(3); // 2-4 devices
+            RiskLevel userRisk = user.getCurrentRiskLevel();
+            
             for (int j = 1; j <= deviceCount; j++) {
+                boolean patched;
+                boolean antivirusEnabled;
+                DeviceTrustLevel trustLevel;
+                double deviceRiskScore;
+                
+                // Align device security with user risk profile
+                if (userRisk == RiskLevel.LOW) {
+                    patched = random.nextDouble() < 0.9; // 90% patched
+                    antivirusEnabled = random.nextDouble() < 0.95; // 95% antivirus
+                    trustLevel = DeviceTrustLevel.TRUSTED;
+                    deviceRiskScore = random.nextDouble() * 30; // 0-30
+                } else if (userRisk == RiskLevel.MEDIUM) {
+                    patched = random.nextDouble() < 0.5; // 50% patched
+                    antivirusEnabled = random.nextDouble() < 0.6; // 60% antivirus
+                    trustLevel = random.nextBoolean() ? DeviceTrustLevel.TRUSTED : DeviceTrustLevel.UNTRUSTED;
+                    deviceRiskScore = 30 + random.nextDouble() * 40; // 30-70
+                } else {
+                    patched = random.nextDouble() < 0.2; // 20% patched
+                    antivirusEnabled = random.nextDouble() < 0.3; // 30% antivirus
+                    trustLevel = DeviceTrustLevel.UNTRUSTED;
+                    deviceRiskScore = 60 + random.nextDouble() * 40; // 60-100
+                }
+                
                 Device device = Device.builder()
                         .deviceName(user.getEmail().split("@")[0] + "-device" + j)
                         .os(randomOS())
                         .osVersion(randomVersion())
-                        .patched(random.nextBoolean())
-                        .antivirusEnabled(random.nextBoolean())
-                        .trustLevel(random.nextBoolean() ? DeviceTrustLevel.TRUSTED : DeviceTrustLevel.UNTRUSTED)
-                        .deviceRiskScore(random.nextDouble() * 100)
+                        .patched(patched)
+                        .antivirusEnabled(antivirusEnabled)
+                        .trustLevel(trustLevel)
+                        .deviceRiskScore(deviceRiskScore)
                         .lastSeenAt(Instant.now().minusSeconds(random.nextInt(3600 * 24 * 7)))
                         .user(user)
                         .build();
@@ -71,44 +128,93 @@ public class DataLoader implements CommandLineRunner {
 
         List<AccessEvent> events = new ArrayList<>();
         for (Device device : devices) {
-            int eventsCount = 5 + random.nextInt(10); // 5-15 events
+            User user = device.getUser();
+            RiskLevel userRisk = user.getCurrentRiskLevel();
+            int eventsCount = 15 + random.nextInt(25); // 15-40 events per device
+            
             for (int k = 0; k < eventsCount; k++) {
+                boolean success;
+                int hourOfDay;
+                boolean weekend;
+                NetworkType networkType;
+                double eventRiskScore;
+                long eventAgeSeconds;
+                
+                // Align access patterns with user risk profile
+                if (userRisk == RiskLevel.LOW) {
+                    success = random.nextDouble() < 0.98; // 98% success
+                    hourOfDay = 8 + random.nextInt(10); // mostly business hours 8-18
+                    weekend = random.nextDouble() < 0.1; // 10% weekend access
+                    networkType = NetworkType.INTERNAL;
+                    eventRiskScore = random.nextDouble() * 25; // 0-25
+                    eventAgeSeconds = random.nextInt(3600 * 24 * 7); // within 7 days
+                } else if (userRisk == RiskLevel.MEDIUM) {
+                    success = random.nextDouble() < 0.85; // 85% success
+                    hourOfDay = random.nextInt(24); // any hour
+                    weekend = random.nextDouble() < 0.3; // 30% weekend access
+                    networkType = random.nextBoolean() ? NetworkType.INTERNAL : NetworkType.VPN;
+                    eventRiskScore = 25 + random.nextDouble() * 40; // 25-65
+                    eventAgeSeconds = random.nextInt(3600 * 24 * 14); // within 14 days
+                } else {
+                    success = random.nextDouble() < 0.7; // 70% success, more failures
+                    hourOfDay = random.nextInt(24); // any hour, including night
+                    weekend = random.nextDouble() < 0.5; // 50% weekend access
+                    networkType = random.nextBoolean() ? NetworkType.VPN : NetworkType.EXTERNAL;
+                    eventRiskScore = 60 + random.nextDouble() * 40; // 60-100
+                    eventAgeSeconds = random.nextInt(3600 * 24 * 30); // within 30 days
+                }
+                
                 AccessEvent event = AccessEvent.builder()
-                        .user(device.getUser())
+                        .user(user)
                         .device(device)
+                        .timestamp(Instant.now().minusSeconds(eventAgeSeconds))
                         .ipAddress(randomIP())
-                        .networkType(randomNetworkType())
+                        .networkType(networkType)
                         .country(randomCountry())
                         .city(randomCity())
-                        .hourOfDay(random.nextInt(24))
-                        .weekend(random.nextBoolean())
+                        .hourOfDay(hourOfDay)
+                        .weekend(weekend)
                         .resource(randomResource())
                         .sessionId(UUID.randomUUID().toString())
                         .userAgent(randomUserAgent())
-                        .success(random.nextDouble() > 0.1)
-                        .eventRiskScore(random.nextDouble() * 100)
+                        .success(success)
+                        .eventRiskScore(eventRiskScore)
                         .build();
                 events.add(event);
             }
         }
         accessEventRepository.saveAll(events);
 
-        // Optional: RiskScoreHistory
+        // Create RiskScoreHistory for each user
         for (User user : users) {
-            riskScoreHistoryRepository.save(
-                    RiskScoreHistory.builder()
-                            .user(user)
-                            .score(user.getTrustScore())
-                            .level(user.getCurrentRiskLevel())
-                            .confidence(0.8 + random.nextDouble() * 0.2)
-                            .modelName("random_forest")
-                            .modelVersion("v1")
-                            .calculatedAt(Instant.now())
-                            .build()
-            );
+            // Create 3-5 historical entries per user
+            int historyCount = 3 + random.nextInt(3);
+            for (int h = 0; h < historyCount; h++) {
+                riskScoreHistoryRepository.save(
+                        RiskScoreHistory.builder()
+                                .user(user)
+                                .score(user.getTrustScore() + (random.nextDouble() - 0.5) * 10)
+                                .level(user.getCurrentRiskLevel())
+                                .confidence(0.75 + random.nextDouble() * 0.25)
+                                .modelName("random_forest")
+                                .modelVersion("v1")
+                                .calculatedAt(Instant.now().minusSeconds(random.nextInt(3600 * 24 * 7)))
+                                .build()
+                );
+            }
         }
 
-        System.out.println("✅ Loaded realistic Zero-Trust test data");
+        System.out.println("✅ Loaded " + users.size() + " users, " + devices.size() + " devices, " + events.size() + " access events");
+        System.out.println("   Risk distribution: LOW=15, MEDIUM=20, HIGH=15");
+        
+        // Print score distribution
+        long lowCount = users.stream().filter(u -> u.getCurrentRiskLevel() == RiskLevel.LOW).count();
+        long medCount = users.stream().filter(u -> u.getCurrentRiskLevel() == RiskLevel.MEDIUM).count();
+        long highCount = users.stream().filter(u -> u.getCurrentRiskLevel() == RiskLevel.HIGH).count();
+        double avgLowScore = users.stream().filter(u -> u.getCurrentRiskLevel() == RiskLevel.LOW).mapToDouble(User::getTrustScore).average().orElse(0);
+        double avgMedScore = users.stream().filter(u -> u.getCurrentRiskLevel() == RiskLevel.MEDIUM).mapToDouble(User::getTrustScore).average().orElse(0);
+        double avgHighScore = users.stream().filter(u -> u.getCurrentRiskLevel() == RiskLevel.HIGH).mapToDouble(User::getTrustScore).average().orElse(0);
+        System.out.println(String.format("   Avg Trust Scores: LOW=%.1f, MEDIUM=%.1f, HIGH=%.1f", avgLowScore, avgMedScore, avgHighScore));
     }
 
     // ---------------- Helper randomizers ----------------

@@ -20,6 +20,10 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
+    volumes:
+      - ./backend:/app                      # Mount backend source code for hot reload
+      - ~/.m2:/root/.m2
+    command: mvn spring-boot:run -Dspring-boot.run.fork=false  # Use DevTools with hot reload
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/zerotrust
       SPRING_DATASOURCE_USERNAME: postgres

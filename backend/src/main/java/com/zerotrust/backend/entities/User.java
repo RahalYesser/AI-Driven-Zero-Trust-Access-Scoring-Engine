@@ -27,7 +27,7 @@ import java.util.*;
 @AllArgsConstructor
 @RequiredArgsConstructor(staticName = "of")
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@ToString(exclude = {"password"})
+@ToString(exclude = {"password", "devices"})
 @EqualsAndHashCode(of = "email")
 public class User implements UserDetails {
 
@@ -58,6 +58,10 @@ public class User implements UserDetails {
     RiskLevel currentRiskLevel;
 
     boolean mfaEnabled;
+    
+    @JsonIgnore
+    String mfaSecret; // For TOTP secret (even though we're using mock MFA)
+    
     boolean accountLocked;
     int failedLoginAttempts;
 
